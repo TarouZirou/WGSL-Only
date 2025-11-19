@@ -1,0 +1,17 @@
+{
+  "name": "wgsl",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@webgpu/types": "^0.1.66",
+    "lite-server": "^2.6.1",
+    "typescript": "^5.9.3"
+  }
+}
