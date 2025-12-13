@@ -1,7 +1,4 @@
-import { getSource } from "./monaco";
-import "./monaco";
-const canvas = document.createElement("canvas");
-canvas.id = "canvas";
+const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 
 // ボタンタグを追加する
 const initButton = document.createElement("button");
@@ -9,14 +6,6 @@ initButton.textContent = "Initialize";
 document.getElementById("buttons")!.appendChild(initButton);
 initButton.addEventListener("click", init, true);
 
-const getSourceBtn = document.getElementById("get-source-btn");
-getSourceBtn?.addEventListener("click", () => {
-	console.log(getSource());
-});
-
-document.getElementById("layout")!.appendChild(canvas);
-canvas.width = canvas.clientWidth;
-canvas.height = canvas.clientHeight;
 const ctx = canvas.getContext("webgpu") as GPUCanvasContext;
 const g_adpt = await navigator.gpu.requestAdapter();
 const g_dev = await g_adpt!.requestDevice();
@@ -127,11 +116,11 @@ canvas.addEventListener("mousemove", (e) => {
 let requestID: number;
 
 // WGSLの初期化を行う
-function init() {
+export function init() {
 	cancelAnimationFrame(requestID);
 	mouse.x = canvas.width / 2;
 	mouse.y = canvas.height / 2;
-	WGSL = getSource();
+	WGSL = ""; //getSource();
 	const WGSLModule = g_dev.createShaderModule({
 		code: WGSL,
 	});

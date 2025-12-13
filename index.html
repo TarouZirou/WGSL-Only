@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -8,9 +8,59 @@
 	</head>
 	<body>
 		<div id="layout">
+			<canvas id="canvas"></canvas>
 			<div id="container"></div>
 		</div>
+
 		<div id="buttons"></div>
-		<script type="module" src="/src/index.ts"></script>
+		<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
+		<script>
+			require.config({
+				paths: {
+					vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs",
+				},
+			});
+			console.log("test");
+			require([
+				"https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/editor/editor.main.js",
+			], function () {
+				console.log("Monaco Editor loaded");
+				const editor = monaco.editor.create(
+					document.getElementById("container"),
+					{
+						value: `// Write your WGSL code here
+struct Uniforms {
+	time: f32,
+	aux: f32,
+	mouse: vec2<f32>,
+	width: f32,
+	height: f32,
+};
+@binding(0) @group(0) var<uniform> u: Uniforms;
+
+@fragment
+fn main(
+	@builtin(position) pos: vec4<f32>
+) -> @location(0) vec4<f32> {
+	let pi = 3.1415926535;
+	let p = vec4<f32>(pos.x/u.width, pos.y/u.height, 0, 0);
+
+	return vec4<f32>(
+		p.xy,
+		0.0,
+		1.0
+	);
+}
+`,
+						language: "wgsl",
+					}
+				);
+				// Ensure layout and focus so editor is interactive
+				editor.layout();
+				editor.focus();
+				window.addEventListener("resize", () => editor.layout());
+			});
+		</script>
+		<script type="module" src="./dist/index.js"></script>
 	</body>
 </html>
