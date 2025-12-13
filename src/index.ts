@@ -1,3 +1,5 @@
+import { getSource } from "./monaco.js";
+
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 
 // ボタンタグを追加する
@@ -120,7 +122,7 @@ export function init() {
 	cancelAnimationFrame(requestID);
 	mouse.x = canvas.width / 2;
 	mouse.y = canvas.height / 2;
-	WGSL = ""; //getSource();
+	WGSL = getSource();
 	const WGSLModule = g_dev.createShaderModule({
 		code: WGSL,
 	});

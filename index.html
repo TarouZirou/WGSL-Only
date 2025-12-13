@@ -13,53 +13,27 @@
 		</div>
 
 		<div id="buttons"></div>
-		<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
+		<script
+			id="monaco-loader"
+			src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"
+		></script>
 		<script>
-			require.config({
-				paths: {
-					vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs",
-				},
-			});
-			console.log("test");
-			require([
-				"https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/editor/editor.main.js",
-			], function () {
-				console.log("Monaco Editor loaded");
-				const editor = monaco.editor.create(
-					document.getElementById("container"),
-					{
-						value: `// Write your WGSL code here
-struct Uniforms {
-	time: f32,
-	aux: f32,
-	mouse: vec2<f32>,
-	width: f32,
-	height: f32,
-};
-@binding(0) @group(0) var<uniform> u: Uniforms;
-
-@fragment
-fn main(
-	@builtin(position) pos: vec4<f32>
-) -> @location(0) vec4<f32> {
-	let pi = 3.1415926535;
-	let p = vec4<f32>(pos.x/u.width, pos.y/u.height, 0, 0);
-
-	return vec4<f32>(
-		p.xy,
-		0.0,
-		1.0
-	);
-}
-`,
-						language: "wgsl",
-					}
+			// diagnostics for loader.js
+			const _s = document.getElementById("monaco-loader");
+			if (_s) {
+				_s.addEventListener("load", () =>
+					console.log("monaco loader.js loaded (script tag)")
 				);
-				// Ensure layout and focus so editor is interactive
-				editor.layout();
-				editor.focus();
-				window.addEventListener("resize", () => editor.layout());
-			});
+				_s.addEventListener("error", (e) =>
+					console.error(
+						"monaco loader.js failed to load (script tag)",
+						e
+					)
+				);
+			} else {
+				console.warn("monaco loader script element not found");
+			}
+			console.log("About to import module ./dist/index.js");
 		</script>
 		<script type="module" src="./dist/index.js"></script>
 	</body>
