@@ -1,12 +1,28 @@
+import { getSource } from "./monaco";
+import "./monaco";
 const canvas = document.createElement("canvas");
-canvas.width = 512;
-canvas.height = 512;
-document.body.appendChild(canvas);
+canvas.id = "canvas";
+
+// ボタンタグを追加する
+const initButton = document.createElement("button");
+initButton.textContent = "Initialize";
+document.getElementById("buttons")!.appendChild(initButton);
+initButton.addEventListener("click", init, true);
+
+const getSourceBtn = document.getElementById("get-source-btn");
+getSourceBtn?.addEventListener("click", () => {
+	console.log(getSource());
+});
+
+document.getElementById("layout")!.appendChild(canvas);
+canvas.width = canvas.clientWidth;
+canvas.height = canvas.clientHeight;
 const ctx = canvas.getContext("webgpu") as GPUCanvasContext;
 const g_adpt = await navigator.gpu.requestAdapter();
 const g_dev = await g_adpt!.requestDevice();
 const vertWGSL = await fetch("./wgsl/vert.wgsl").then((r) => r.text());
 const fragWGSL = await fetch("./wgsl/frag.wgsl").then((r) => r.text());
+let WGSL: string;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 ctx.configure({
 	device: g_dev,
@@ -16,6 +32,7 @@ ctx.configure({
 
 let time = 0;
 let fps = 1000 / 60;
+
 const mouse = {
 	x: 0,
 	y: 0,
@@ -54,7 +71,7 @@ const uniBuf = g_dev.createBuffer({
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-const pipeline: GPURenderPipeline = g_dev.createRenderPipeline({
+let pipeline: GPURenderPipeline = g_dev.createRenderPipeline({
 	layout: "auto",
 	vertex: {
 		module: g_dev.createShaderModule({
@@ -89,7 +106,7 @@ const pipeline: GPURenderPipeline = g_dev.createRenderPipeline({
 		topology: "triangle-list",
 	},
 });
-const uniBindGroup = g_dev.createBindGroup({
+let uniBindGroup = g_dev.createBindGroup({
 	layout: pipeline.getBindGroupLayout(0),
 	entries: [
 		{
@@ -102,8 +119,72 @@ const uniBindGroup = g_dev.createBindGroup({
 	label: "uni",
 });
 
+canvas.addEventListener("mousemove", (e) => {
+	mouse.x = e.clientX;
+	mouse.y = e.clientY;
+});
+
+let requestID: number;
+
+// WGSLの初期化を行う
+function init() {
+	cancelAnimationFrame(requestID);
+	mouse.x = canvas.width / 2;
+	mouse.y = canvas.height / 2;
+	WGSL = getSource();
+	const WGSLModule = g_dev.createShaderModule({
+		code: WGSL,
+	});
+	pipeline = g_dev.createRenderPipeline({
+		layout: "auto",
+		vertex: {
+			module: g_dev.createShaderModule({
+				code: vertWGSL,
+			}),
+			entryPoint: "main",
+			buffers: [
+				{
+					arrayStride: 4 * 3,
+					attributes: [
+						{
+							shaderLocation: 0,
+							offset: 0,
+							format: "float32x3",
+						},
+					],
+				},
+			],
+		},
+		fragment: {
+			module: WGSLModule,
+			entryPoint: "main",
+			targets: [
+				{
+					format: presentationFormat,
+				},
+			],
+		},
+		primitive: {
+			topology: "triangle-list",
+		},
+	});
+	uniBindGroup = g_dev.createBindGroup({
+		layout: pipeline.getBindGroupLayout(0),
+		entries: [
+			{
+				binding: 0,
+				resource: {
+					buffer: uniBuf,
+				},
+			},
+		],
+		label: "uni",
+	});
+	render(ctx);
+}
+
 const sTime = new Date().getTime();
-function render(ctx: GPUCanvasContext, pipeline: GPURenderPipeline) {
+function render(ctx: GPUCanvasContext) {
 	time = (new Date().getTime() - sTime) / 1000;
 
 	//描画
@@ -124,12 +205,12 @@ function render(ctx: GPUCanvasContext, pipeline: GPURenderPipeline) {
 	g_dev.queue.writeBuffer(
 		uniBuf,
 		4 * 2,
-		new Float32Array([mouse.x, mouse.y])
+		new Float32Array([mouse.x, mouse.y]),
 	);
 	g_dev.queue.writeBuffer(
 		uniBuf,
 		4 * 4,
-		new Float32Array([canvas.width, canvas.height])
+		new Float32Array([canvas.width, canvas.height]),
 	);
 	passEnc.setPipeline(pipeline);
 	passEnc.setVertexBuffer(0, vertexBuf);
@@ -138,6 +219,6 @@ function render(ctx: GPUCanvasContext, pipeline: GPURenderPipeline) {
 	passEnc.drawIndexed(6, 1);
 	passEnc.end();
 	g_dev.queue.submit([cmdEnc.finish()]);
-	requestAnimationFrame(() => render(ctx, pipeline));
+	requestID = requestAnimationFrame(() => render(ctx));
 }
-render(ctx, pipeline);
+render(ctx);

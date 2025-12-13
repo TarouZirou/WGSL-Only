@@ -1,17 +1,22 @@
 {
-  "name": "wgsl",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "@webgpu/types": "^0.1.66",
-    "lite-server": "^2.6.1",
-    "typescript": "^5.9.3"
-  }
+	"name": "wgsl",
+	"version": "1.0.0",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "vite --port 8080",
+		"build": "tsc --noEmit && esbuild src/index.ts --minify --bundle --outdir=dist --platform=browser --target=es2022 --format=esm --sourcemap --loader:.ttf=file",
+		"deploy": "gh-pages -d dist"
+	},
+	"homepage": "TarouZirou.github.io/WGSL-Only",
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"devDependencies": {
+		"@webgpu/types": "^0.1.66",
+		"monaco-editor": "^0.55.1",
+		"typescript": "^5.9.3",
+		"vite": "^7.2.7"
+	}
 }

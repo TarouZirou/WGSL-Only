@@ -7,9 +7,10 @@
 
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module
-		"module": "ES2022",
+		"module": "esnext",
 		"target": "esnext",
-		"types": ["@webgpu/types"],
+		"types": ["@webgpu/types", "vite/client"],
+		"moduleResolution": "bundler",
 		// For nodejs:
 		// "lib": ["esnext"],
 		// "types": ["node"],
