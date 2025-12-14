@@ -18,6 +18,12 @@ body {
 	box-sizing: border-box;
 }
 
+#vertical {
+	display: flex;
+	flex-direction: column;
+	width: 512px;
+}
+
 #canvas {
 	width: 512px;
 	height: 512px;

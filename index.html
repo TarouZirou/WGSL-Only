@@ -1,14 +1,16 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>WGSL</title>
+		<title>WGSL Editor</title>
 		<link rel="stylesheet" href="./style.css" />
 	</head>
 	<body>
 		<div id="layout">
-			<canvas id="canvas"></canvas>
+			<div id="vertical">
+				<canvas id="canvas"></canvas>
+				<div id="console">test</div>
+			</div>
 			<div id="container"></div>
 		</div>
 
@@ -22,13 +24,13 @@
 			const _s = document.getElementById("monaco-loader");
 			if (_s) {
 				_s.addEventListener("load", () =>
-					console.log("monaco loader.js loaded (script tag)")
+					console.log("monaco loader.js loaded (script tag)"),
 				);
 				_s.addEventListener("error", (e) =>
 					console.error(
 						"monaco loader.js failed to load (script tag)",
-						e
-					)
+						e,
+					),
 				);
 			} else {
 				console.warn("monaco loader script element not found");

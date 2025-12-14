@@ -8,11 +8,20 @@ initButton.textContent = "Initialize";
 document.getElementById("buttons")!.appendChild(initButton);
 initButton.addEventListener("click", init, true);
 
+// エラーを出力する画面
+const debugConsole = document.getElementById("console");
+
 const ctx = canvas.getContext("webgpu") as GPUCanvasContext;
 const g_adpt = await navigator.gpu.requestAdapter();
 const g_dev = await g_adpt!.requestDevice();
+/*
+g_dev.addEventListener("uncapturederror", (event: GPUUncapturedErrorEvent) => {
+	console.error(event.error.message);
+	debugConsole!.textContent = event.error.message + "\n";
+});
+*/
 const vertWGSL = await fetch("./wgsl/vert.wgsl").then((r) => r.text());
-const fragWGSL = await fetch("./wgsl/frag.wgsl").then((r) => r.text());
+
 let WGSL: string;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 ctx.configure({
@@ -29,6 +38,11 @@ const mouse = {
 	y: 0,
 };
 
+canvas.addEventListener("mousemove", (e) => {
+	mouse.x = e.clientX;
+	mouse.y = e.clientY;
+});
+
 //四角形の頂点データ
 /* prettier-ignore */
 const vertex = new Float32Array([
@@ -40,14 +54,14 @@ const vertex = new Float32Array([
 const idx = new Uint16Array([0, 2, 1, 0, 2, 3]);
 
 //頂点バッファ
-const vertexBuf = g_dev.createBuffer({
+const vertexBuf: GPUBuffer = g_dev.createBuffer({
 	size: vertex.byteLength,
 	usage: GPUBufferUsage.VERTEX,
 	mappedAtCreation: true,
 });
 new Float32Array(vertexBuf.getMappedRange()).set(vertex);
 vertexBuf.unmap();
-const idxBuf = g_dev.createBuffer({
+const idxBuf: GPUBuffer = g_dev.createBuffer({
 	size: idx.byteLength,
 	usage: GPUBufferUsage.INDEX,
 	mappedAtCreation: true,
@@ -57,64 +71,15 @@ idxBuf.unmap();
 
 //Uniformバッファ
 const uniBufSize = 4 * 6;
-const uniBuf = g_dev.createBuffer({
+const uniBuf: GPUBuffer = g_dev.createBuffer({
 	size: uniBufSize,
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-let pipeline: GPURenderPipeline = g_dev.createRenderPipeline({
-	layout: "auto",
-	vertex: {
-		module: g_dev.createShaderModule({
-			code: vertWGSL,
-		}),
-		entryPoint: "main",
-		buffers: [
-			{
-				arrayStride: 4 * 3,
-				attributes: [
-					{
-						shaderLocation: 0,
-						offset: 0,
-						format: "float32x3",
-					},
-				],
-			},
-		],
-	},
-	fragment: {
-		module: g_dev.createShaderModule({
-			code: fragWGSL,
-		}),
-		entryPoint: "main",
-		targets: [
-			{
-				format: presentationFormat,
-			},
-		],
-	},
-	primitive: {
-		topology: "triangle-list",
-	},
-});
-let uniBindGroup = g_dev.createBindGroup({
-	layout: pipeline.getBindGroupLayout(0),
-	entries: [
-		{
-			binding: 0,
-			resource: {
-				buffer: uniBuf,
-			},
-		},
-	],
-	label: "uni",
-});
+let pipeline: GPURenderPipeline;
+let uniBindGroup: GPUBindGroup;
 
-canvas.addEventListener("mousemove", (e) => {
-	mouse.x = e.clientX;
-	mouse.y = e.clientY;
-});
-
+//cancelAnimationFrameのために、requestAnimationFrameのIDを保存する
 let requestID: number;
 
 // WGSLの初期化を行う
@@ -122,10 +87,25 @@ export function init() {
 	cancelAnimationFrame(requestID);
 	mouse.x = canvas.width / 2;
 	mouse.y = canvas.height / 2;
+
+	//
+	g_dev.pushErrorScope("validation");
+	// WGSLの初期化を行う
 	WGSL = getSource();
 	const WGSLModule = g_dev.createShaderModule({
 		code: WGSL,
 	});
+	g_dev.popErrorScope().then(async (error: GPUError | null) => {
+		if (error) {
+			const info = await WGSLModule.getCompilationInfo();
+
+			debugConsole!.innerHTML = info.messages
+				.map((msg) => msg.message)
+				.join("<br>");
+		}
+	});
+
+	//WebGPUについて、必要な分だけ初期化する
 	pipeline = g_dev.createRenderPipeline({
 		layout: "auto",
 		vertex: {
@@ -212,4 +192,6 @@ function render(ctx: GPUCanvasContext) {
 	g_dev.queue.submit([cmdEnc.finish()]);
 	requestID = requestAnimationFrame(() => render(ctx));
 }
+
+init();
 render(ctx);
