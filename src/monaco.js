@@ -1,9 +1,14 @@
 let editor;
 
+console.log(localStorage.getItem("shader"));
+
 /**
  * @type {string}
  */
-export const initSource = /* wgsl */ `// Write your WGSL code here
+export const initSource =
+	localStorage.getItem("shader") === null ||
+	localStorage.getItem("shader") === undefined
+		? /* wgsl */ `
 struct Uniforms {
 	time: f32,
 	aux: f32,
@@ -17,16 +22,12 @@ struct Uniforms {
 fn main(
 	@builtin(position) pos: vec4<f32>
 ) -> @location(0) vec4<f32> {
-	let pi = 3.1415926535;
-	let p = vec4<f32>(pos.x/u.width, pos.y/u.height, 0, 0);
+	let p = vec2<f32>(pos.x / u.width, pos.y / u.height);
 
-	return vec4<f32>(
-		p.xy,
-		0.0,
-		1.0
-	);
+	return vec4<f32>(p, 0.0, 1.0);
 }
-`;
+`
+		: localStorage.getItem("shader");
 
 function setupRequireAndCreate() {
 	try {
@@ -44,7 +45,7 @@ function setupRequireAndCreate() {
 					language: "wgsl",
 					theme: "vs-dark",
 					fontFamily: "Fira Code, monospace",
-					fontSize: 14,
+					fontSize: 12,
 					fontLigatures: true,
 				},
 			);

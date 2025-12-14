@@ -28,11 +28,20 @@ body {
 	width: 512px;
 }
 
+#console {
+	background-color: #222;
+	color: #fff;
+	padding: 10px;
+	box-sizing: border-box;
+	height: 100%;
+}
+
 #canvas {
 	width: 512px;
 	height: 512px;
 	flex: 0 0 512px;
 	box-sizing: border-box;
+	background-color: #000;
 }
 
 #buttons {

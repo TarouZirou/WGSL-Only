@@ -1,39 +1,61 @@
 import { getSource } from "./monaco.js";
 
-const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
+interface Point {
+	x: number;
+	y: number;
+}
 
+const canvas: HTMLCanvasElement = document.getElementById(
+	"canvas",
+)! as HTMLCanvasElement;
+const buttons: HTMLDivElement = document.getElementById(
+	"buttons",
+)! as HTMLDivElement;
 // ボタンタグを追加する
-const initButton = document.createElement("button");
-initButton.textContent = "Initialize";
-document.getElementById("buttons")!.appendChild(initButton);
-initButton.addEventListener("click", init, true);
+const runButton: HTMLButtonElement = document.createElement("button");
+runButton.textContent = "Run";
+buttons.appendChild(runButton);
+
+const saveButton = document.createElement("button");
+saveButton.textContent = "Save";
+buttons.appendChild(saveButton);
+
+const downloadButton: HTMLButtonElement = document.createElement("button");
+downloadButton.textContent = "Download";
+buttons.appendChild(downloadButton);
+
+// ボタンを押した時に、シェーダーを読んで初期化する
+runButton.addEventListener("click", init, true);
+
+saveButton.addEventListener("click", save, true);
+
+downloadButton.addEventListener("click", download, true);
 
 // エラーを出力する画面
-const debugConsole = document.getElementById("console");
+const debugConsole: HTMLDivElement = document.getElementById(
+	"console",
+)! as HTMLDivElement;
 
 const ctx = canvas.getContext("webgpu") as GPUCanvasContext;
-const g_adpt = await navigator.gpu.requestAdapter();
-const g_dev = await g_adpt!.requestDevice();
-/*
-g_dev.addEventListener("uncapturederror", (event: GPUUncapturedErrorEvent) => {
-	console.error(event.error.message);
-	debugConsole!.textContent = event.error.message + "\n";
-});
-*/
-const vertWGSL = await fetch("./wgsl/vert.wgsl").then((r) => r.text());
+const g_adpt: GPUAdapter =
+	(await navigator.gpu.requestAdapter()!) as GPUAdapter;
+const g_dev: GPUDevice = await g_adpt.requestDevice();
+const vertWGSL: string = await fetch("./wgsl/vert.wgsl").then((r) => r.text());
 
 let WGSL: string;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const presentationFormat: GPUTextureFormat =
+	navigator.gpu.getPreferredCanvasFormat();
 ctx.configure({
 	device: g_dev,
 	format: presentationFormat,
 	alphaMode: "opaque",
 });
 
-let time = 0;
-let fps = 1000 / 60;
+let time: number = 0; // [s]
+let fps: number = 1000 / 60; // [ms]
+let frameError: number = 1; // [ms]
 
-const mouse = {
+const mouse: Point = {
 	x: 0,
 	y: 0,
 };
@@ -51,33 +73,35 @@ const vertex = new Float32Array([
 	1, -1, 0,
 	1, 1, 0,
 ]);
-const idx = new Uint16Array([0, 2, 1, 0, 2, 3]);
+// prettier-ignore
+const idx = new Uint16Array([
+	0, 2, 1,
+	0, 2, 3
+]);
 
 //頂点バッファ
 const vertexBuf: GPUBuffer = g_dev.createBuffer({
 	size: vertex.byteLength,
-	usage: GPUBufferUsage.VERTEX,
-	mappedAtCreation: true,
+	usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
-new Float32Array(vertexBuf.getMappedRange()).set(vertex);
-vertexBuf.unmap();
+g_dev.queue.writeBuffer(vertexBuf, 0, vertex);
+
+//インデックスバッファ
 const idxBuf: GPUBuffer = g_dev.createBuffer({
 	size: idx.byteLength,
-	usage: GPUBufferUsage.INDEX,
-	mappedAtCreation: true,
+	usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
-new Uint16Array(idxBuf.getMappedRange()).set(idx);
-idxBuf.unmap();
+g_dev.queue.writeBuffer(idxBuf, 0, idx);
 
 //Uniformバッファ
 const uniBufSize = 4 * 6;
-const uniBuf: GPUBuffer = g_dev.createBuffer({
+const uniformBuffer: GPUBuffer = g_dev.createBuffer({
 	size: uniBufSize,
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
 let pipeline: GPURenderPipeline;
-let uniBindGroup: GPUBindGroup;
+let uniformBindGroup: GPUBindGroup;
 
 //cancelAnimationFrameのために、requestAnimationFrameのIDを保存する
 let requestID: number;
@@ -139,13 +163,13 @@ export function init() {
 			topology: "triangle-list",
 		},
 	});
-	uniBindGroup = g_dev.createBindGroup({
+	uniformBindGroup = g_dev.createBindGroup({
 		layout: pipeline.getBindGroupLayout(0),
 		entries: [
 			{
 				binding: 0,
 				resource: {
-					buffer: uniBuf,
+					buffer: uniformBuffer,
 				},
 			},
 		],
@@ -154,13 +178,32 @@ export function init() {
 	render(ctx);
 }
 
-const sTime = new Date().getTime();
+function save() {
+	const WGSL = getSource();
+	localStorage.setItem("shader", WGSL);
+}
+
+function reset() {
+	localStorage.removeItem("shader");
+}
+
+function download() {
+	const blob: Blob = new Blob([WGSL], { type: "text/plain" });
+	const url: string = URL.createObjectURL(blob);
+	const a: HTMLAnchorElement = document.createElement("a");
+	a.href = url;
+	a.download = "shader.wgsl";
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
+const sTime: number = new Date().getTime(); // [ms]
 function render(ctx: GPUCanvasContext) {
-	time = (new Date().getTime() - sTime) / 1000;
+	time = (new Date().getTime() - sTime) / 1000; //[s]
 
 	//描画
-	const cmdEnc = g_dev.createCommandEncoder();
-	const texView = ctx.getCurrentTexture();
+	const cmdEnc: GPUCommandEncoder = g_dev.createCommandEncoder();
+	const texView: GPUTexture = ctx.getCurrentTexture();
 	const rendPassDesc: GPURenderPassDescriptor = {
 		colorAttachments: [
 			{
@@ -171,24 +214,32 @@ function render(ctx: GPUCanvasContext) {
 			},
 		],
 	};
-	const passEnc = cmdEnc.beginRenderPass(rendPassDesc);
-	g_dev.queue.writeBuffer(uniBuf, 0, new Float32Array([time]));
+
+	// コマンドの開始
+	const passEnc: GPURenderPassEncoder = cmdEnc.beginRenderPass(rendPassDesc);
+
+	// バッファに変数を書き込む
+	g_dev.queue.writeBuffer(uniformBuffer, 0, new Float32Array([time]));
 	g_dev.queue.writeBuffer(
-		uniBuf,
+		uniformBuffer,
 		4 * 2,
 		new Float32Array([mouse.x, mouse.y]),
 	);
 	g_dev.queue.writeBuffer(
-		uniBuf,
+		uniformBuffer,
 		4 * 4,
 		new Float32Array([canvas.width, canvas.height]),
 	);
+
+	// パイプラインを選ぶ
 	passEnc.setPipeline(pipeline);
 	passEnc.setVertexBuffer(0, vertexBuf);
 	passEnc.setIndexBuffer(idxBuf, "uint16");
-	passEnc.setBindGroup(0, uniBindGroup);
+	passEnc.setBindGroup(0, uniformBindGroup);
 	passEnc.drawIndexed(6, 1);
 	passEnc.end();
+
+	// コマンドを送信
 	g_dev.queue.submit([cmdEnc.finish()]);
 	requestID = requestAnimationFrame(() => render(ctx));
 }
