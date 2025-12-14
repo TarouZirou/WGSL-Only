@@ -43,6 +43,9 @@ function setupRequireAndCreate() {
 					value: initSource,
 					language: "wgsl",
 					theme: "vs-dark",
+					fontFamily: "Fira Code, monospace",
+					fontSize: 14,
+					fontLigatures: true,
 				},
 			);
 			// Ensure layout and focus so editor is interactive
