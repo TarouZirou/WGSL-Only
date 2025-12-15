@@ -24,12 +24,18 @@ const downloadButton: HTMLButtonElement = document.createElement("button");
 downloadButton.textContent = "Download";
 buttons.appendChild(downloadButton);
 
+const clearButton = document.createElement("button");
+clearButton.textContent = "Clear";
+buttons.appendChild(clearButton);
+
 // ボタンを押した時に、シェーダーを読んで初期化する
 runButton.addEventListener("click", init, true);
 
 saveButton.addEventListener("click", save, true);
 
 downloadButton.addEventListener("click", download, true);
+
+clearButton.addEventListener("click", reset, true);
 
 // エラーを出力する画面
 const debugConsole: HTMLDivElement = document.getElementById(
@@ -184,7 +190,9 @@ function save() {
 }
 
 function reset() {
-	localStorage.removeItem("shader");
+	if (confirm("Are you sure to clear?")) {
+		localStorage.removeItem("shader");
+	}
 }
 
 function download() {
@@ -245,4 +253,3 @@ function render(ctx: GPUCanvasContext) {
 }
 
 init();
-render(ctx);
